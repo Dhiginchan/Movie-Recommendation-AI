@@ -15,32 +15,17 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 # Initialize the AI model
 llm = ChatGoogleGenerativeAI(model=GEMINI_MODEL, temperature=0.7)
-
-# Define Movie Recommendation Prompt Template
-TEMPLATE = """You are a global movie recommendation assistant. 
-Based on the user's preferences, suggest movies from different 
-countries, languages, and genres.
-
-User’s Movie Preferences:
-{input}
-
-Instructions:
-1. Recommend **3 movies** based on genre, mood, and region.
-2. Include **Title, Year, Country, Genre, and Short Plot Summary**.
-3. Suggest **where to watch the movies (Netflix, Prime, Disney+, etc.)**.
+# Movie Recommendation Template
+TEMPLATE = """
+You are a movie recommendation assistant. Based on the user's preference, suggest movies.
+User's preference: {input}
 
 Movies:
 """
-
 prompt = PromptTemplate.from_template(TEMPLATE)
 
-# Create Flask app
 app = Flask(__name__)
-CORS(app)  # Enable CORS for external access
-
-@app.route("/", methods=["GET"])
-def home():
-    return "Movie Recommendation AI is Running! Use /recommend to get movie suggestions."
+CORS(app)  # Enable Cross-Origin Resource Sharing
 
 @app.route("/recommend", methods=["POST"])
 def recommend():
@@ -49,11 +34,14 @@ def recommend():
     if not user_input:
         return jsonify({"error": "Please provide a movie preference."}), 400
 
-    # Generate AI-based movie recommendations
-    formatted_prompt = prompt.format(input=user_input)
-    response = llm.invoke(formatted_prompt)
+    try:
+        # Format prompt with user input
+        formatted_prompt = prompt.format(input=user_input)
+        response = llm.invoke(formatted_prompt)
+        return jsonify({"movies": response.content})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-    return jsonify({"movies": response.content})
-
+# For local testing (use Gunicorn in production)
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
